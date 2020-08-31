@@ -1,8 +1,8 @@
 export const americanToBritishTitles = {
-  "mr.": "mr",
-  "mrs.": "mrs",
-  "ms.": "ms",
-  "mx.": "mx",
-  "dr.": "dr",
-  "prof.": "prof",
+  "mrs.": "Mrs",
+  "mr.": "Mr",
+  "ms.": "Ms",
+  "mx.": "Mx",
+  "dr.": "Dr",
+  "prof.": "Prof",
 };

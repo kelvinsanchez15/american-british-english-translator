@@ -2,6 +2,7 @@ import { americanOnly } from "./american-only.js";
 import { britishOnly } from "./british-only.js";
 import { americanToBritishSpelling } from "./american-to-british-spelling.js";
 import { americanToBritishTitles } from "./american-to-british-titles.js";
+import { britishToAmericanTitles } from "./british-to-american-titles.js";
 
 // Reverse object key/value pairs
 const reverseDict = (obj) =>
@@ -11,37 +12,45 @@ const reverseDict = (obj) =>
 const americanBritishDict = {
   ...americanOnly,
   ...americanToBritishSpelling,
-  ...americanToBritishTitles,
 };
 
 // British/American dictionary
 const reverseAmericanToBritishSpelling = reverseDict(americanToBritishSpelling);
-const reverseAmericanToBritishTitles = reverseDict(americanToBritishTitles);
 
 const britishAmericanDict = {
   ...britishOnly,
   ...reverseAmericanToBritishSpelling,
-  ...reverseAmericanToBritishTitles,
 };
 
-// Selectors
-const textInput = document.querySelector("#text-input");
-const localeSelect = document.querySelector("#locale-select");
-const translateBtn = document.querySelector("#translate-btn");
-const translationDiv = document.querySelector("#translated-sentence");
-
-// "Mangoes are my favorite fruit. --> Mangoes are my favourite fruit."
-// "I ate yogurt for breakfast. --> I ate yoghurt for breakfast."
-const translate = () => {
-  const originalStr = textInput.value;
+// Translator logic
+const translate = (str, locale) => {
+  const originalStr = str;
   const lowerCasedOriginalStr = originalStr.toLowerCase();
-  const translationType = localeSelect.value;
+  const translationType = locale;
+
   const dict =
     translationType === "american-to-british"
       ? americanBritishDict
       : britishAmericanDict;
 
+  const titlesHonorificsDict =
+    translationType === "american-to-british"
+      ? americanToBritishTitles
+      : britishToAmericanTitles;
+
+  const timeRegex =
+    translationType === "american-to-british"
+      ? /([1-9]|1[012]):[0-5][0-9]/g
+      : /([1-9]|1[012]).[0-5][0-9]/g;
+
   const matchesMap = {};
+
+  // Search for titles/honorifics and add'em to the matchesMap object
+  Object.entries(titlesHonorificsDict).map(([k, v]) => {
+    if (lowerCasedOriginalStr.includes(k)) {
+      matchesMap[k] = v;
+    }
+  });
 
   // Filter words with spaces from current dictionary
   const wordsWithSpace = Object.fromEntries(
@@ -62,29 +71,79 @@ const translate = () => {
       if (dict[word]) return (matchesMap[word] = dict[word]);
     });
 
-  const result = replaceAll(originalStr, matchesMap);
+  // Search for time matches and add'em to the matchesMap object
+  const matchedTimes = lowerCasedOriginalStr.match(timeRegex);
 
-  translationDiv.innerHTML = result;
+  if (matchedTimes) {
+    matchedTimes.map((e) => {
+      if (translationType === "american-to-british") {
+        return (matchesMap[e] = e.replace(":", "."));
+      }
+      return (matchesMap[e] = e.replace(".", ":"));
+    });
+  }
 
-  console.log(result);
+  // No matches
+  if (Object.keys(matchesMap).length === 0) return null;
+
+  // Return logic
+  const translation = replaceAll(originalStr, matchesMap);
+
+  const translationWithHighlight = replaceAllWithHighlight(
+    originalStr,
+    matchesMap
+  );
+
+  return [translation, translationWithHighlight];
 };
 
 const replaceAll = (str, mapObj) => {
   const re = new RegExp(Object.keys(mapObj).join("|"), "gi");
 
-  return str.replace(
-    re,
-    (matched) =>
-      `<span class='highlight'>${mapObj[matched.toLowerCase()]}</span>`
-  );
+  return str.replace(re, (matched) => mapObj[matched.toLowerCase()]);
 };
 
-//`<span class='highlight'>${upperWordOrTerm}</span>`
+const replaceAllWithHighlight = (str, mapObj) => {
+  const re = new RegExp(Object.keys(mapObj).join("|"), "gi");
 
-// console.log(americanBritishDict["certified"]);
+  return str.replace(re, (matched) => {
+    return `<span class='highlight'>${mapObj[matched.toLowerCase()]}</span>`;
+  });
+};
+
+// Selectors
+const textInput = document.querySelector("#text-input");
+const localeSelect = document.querySelector("#locale-select");
+const translateBtn = document.querySelector("#translate-btn");
+const clearBtn = document.querySelector("#clear-btn");
+const translationDiv = document.querySelector("#translated-sentence");
+const errorDiv = document.querySelector("#error-msg");
+
+// Handlers
+const translateClickHandler = () => {
+  const str = textInput.value;
+  const translationType = localeSelect.value;
+
+  // Handle empty input string
+  errorDiv.textContent = "";
+  if (!str) return (errorDiv.innerText = "Error: No text to translate.");
+
+  const output = translate(str, translationType);
+
+  translationDiv.innerHTML = output
+    ? output[1]
+    : "Everything looks good to me!";
+};
+
+const clearClickHandler = () => {
+  textInput.value = "";
+  translationDiv.innerHTML = "";
+  errorDiv.textContent = "";
+};
 
 // Event listeners
-translateBtn.addEventListener("click", translate);
+translateBtn.addEventListener("click", translateClickHandler);
+clearBtn.addEventListener("click", clearClickHandler);
 
 /* 
   Export your functions for testing in Node.
@@ -92,5 +151,9 @@ translateBtn.addEventListener("click", translate);
   the client side
 */
 try {
-  module.exports = {};
+  module.exports = {
+    translate,
+    translateClickHandler,
+    clearClickHandler,
+  };
 } catch (e) {}
