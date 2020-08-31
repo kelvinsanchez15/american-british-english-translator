@@ -74,7 +74,7 @@ suite("Functional Tests", () => {
 
       Translator.translateClickHandler();
 
-      assert.strictEqual(errorDiv.innerText, expected);
+      assert.strictEqual(errorDiv.textContent, expected);
 
       done();
     });

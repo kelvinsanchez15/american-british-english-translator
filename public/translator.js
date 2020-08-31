@@ -124,9 +124,11 @@ const translateClickHandler = () => {
   const str = textInput.value;
   const translationType = localeSelect.value;
 
-  // Handle empty input string
+  translationDiv.innerHTML = "";
   errorDiv.textContent = "";
-  if (!str) return (errorDiv.innerText = "Error: No text to translate.");
+
+  // Handle empty input string
+  if (!str) return (errorDiv.textContent = "Error: No text to translate.");
 
   const output = translate(str, translationType);
 
